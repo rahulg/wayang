@@ -1,0 +1,15 @@
+if [ -z "$BASH_VERSION" ]; then
+	export GOPATH="$(cd "$(dirname "${0}" )" && pwd)"
+else
+	export GOPATH="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+fi
+export OLDPS1=$PS1
+export PS1="[go:$(basename $GOPATH)] $PS1"
+alias gcd="cd $GOPATH"
+deactivate() {
+	export PS1=$OLDPS1
+	unset GOPATH
+	unset OLDPS1
+	unalias gcd
+	unset deactivate
+}
