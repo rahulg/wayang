@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	HTTPPrefix      string `json:"http_prefix"`
 	Database        string `json:"db"`
 	DatabaseAddress string `json:"db_addr"`
 	StaticConf      string `json:"static_conf"`
@@ -33,6 +34,7 @@ func main() {
 		return
 	}
 	config := Config{}
+	config.HTTPPrefix = ""
 
 	err = json.Unmarshal(confData, &config)
 	if err != nil {
@@ -51,12 +53,12 @@ func main() {
 			return
 		}
 
-		r.HandleFunc("/", indexPage).Methods("GET")
-		r.HandleFunc("/", newMock).Methods("POST")
-		r.HandleFunc("/{id:[0-9a-z]+}", optionsHandlerRoot).Methods("OPTIONS")
-		r.HandleFunc("/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
-		r.HandleFunc("/{id:[0-9a-z]+}", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
-		r.HandleFunc("/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+		r.HandleFunc(config.HTTPPrefix+"/", indexPage).Methods("GET")
+		r.HandleFunc(config.HTTPPrefix+"/", newMock).Methods("POST")
+		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}", optionsHandlerRoot).Methods("OPTIONS")
+		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
+		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
 
 	} else if config.Database == "static" {
 
@@ -78,10 +80,10 @@ func main() {
 			return
 		}
 
-		r.HandleFunc("/", optionsHandlerRoot).Methods("OPTIONS")
-		r.HandleFunc("/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
-		r.HandleFunc("/", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
-		r.HandleFunc("/{endpoint:[a-zA-Z0-9/]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+		r.HandleFunc(config.HTTPPrefix+"/", optionsHandlerRoot).Methods("OPTIONS")
+		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
+		r.HandleFunc(config.HTTPPrefix+"/", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
 
 	}
 	defer db.Close()
