@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 	"wayang/wayang"
@@ -15,7 +16,6 @@ type Config struct {
 	HTTPPrefix      string `json:"http_prefix"`
 	Database        string `json:"db"`
 	DatabaseAddress string `json:"db_addr"`
-	StaticConf      string `json:"static_conf"`
 }
 
 var (
@@ -45,6 +45,8 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
+	log.Println("Using", config.Database, "@", config.DatabaseAddress)
+
 	if config.Database == "mongodb" {
 
 		db, err = wayang.NewMongoStore(config.DatabaseAddress)
@@ -53,8 +55,9 @@ func main() {
 			return
 		}
 
-		r.HandleFunc(config.HTTPPrefix+"/", indexPage).Methods("GET")
-		r.HandleFunc(config.HTTPPrefix+"/", newMock).Methods("POST")
+		r.HandleFunc(config.HTTPPrefix+"/", rootGet).Methods("GET")
+		r.HandleFunc(config.HTTPPrefix+"/", rootPost).Methods("POST")
+		r.HandleFunc(config.HTTPPrefix+"/", rootOptions).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}", optionsHandlerRoot).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -63,14 +66,14 @@ func main() {
 	} else if config.Database == "static" {
 
 		mock := wayang.Mock{}
-		mockData, err := ioutil.ReadFile(config.StaticConf)
+		mockData, err := ioutil.ReadFile(config.DatabaseAddress)
 		if err != nil {
-			fmt.Println("Failed to read static configuration file:", config.StaticConf)
+			fmt.Println("Failed to read static configuration file:", config.DatabaseAddress)
 			return
 		}
 		err = json.Unmarshal(mockData, &mock)
 		if err != nil {
-			fmt.Println("Failed to parse static configuration file:", config.StaticConf)
+			fmt.Println("Failed to parse static configuration file:", config.DatabaseAddress)
 			return
 		}
 
@@ -97,12 +100,26 @@ func accessControlAllow(rw http.ResponseWriter, req *http.Request) {
 	origin := req.Header.Get("Origin")
 	if origin == "" {
 		rw.Header().Set("Access-Control-Allow-Origin", "*")
+		log.Println(req.Method, req.RequestURI)
 	} else {
 		rw.Header().Set("Access-Control-Allow-Origin", origin)
+		log.Println(req.Method, req.RequestURI, "[Origin:", req.Header.Get("Origin")+"]")
 	}
 }
 
-func indexPage(rw http.ResponseWriter, req *http.Request) {
+func rootOptions(rw http.ResponseWriter, req *http.Request) {
+
+	defer req.Body.Close()
+
+	accessControlAllow(rw, req)
+
+	csv := "OPTIONS,GET,POST"
+	rw.Header().Set("Allow", csv)
+	rw.Header().Set("Access-Control-Allow-Methods", csv)
+
+}
+
+func rootGet(rw http.ResponseWriter, req *http.Request) {
 	accessControlAllow(rw, req)
 	helpMessage := `Hi!
 To create an endpoint, do a POST request to the current URL.
@@ -133,7 +150,7 @@ type NewMockResponse struct {
 	URL    string `json:"url,omitempty"`
 }
 
-func newMock(rw http.ResponseWriter, req *http.Request) {
+func rootPost(rw http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	accessControlAllow(rw, req)
 	rw.Header().Set("Content-Type", "application/json")
@@ -215,7 +232,6 @@ func optionsHandlerRoot(rw http.ResponseWriter, req *http.Request) {
 	id := vars["id"]
 	endpoint := "/"
 
-	accessControlAllow(rw, req)
 	processOptionsResponse(rw, req, id, endpoint)
 }
 
@@ -224,7 +240,6 @@ func optionsHandler(rw http.ResponseWriter, req *http.Request) {
 	id := vars["id"]
 	endpoint := "/" + vars["endpoint"]
 
-	accessControlAllow(rw, req)
 	processOptionsResponse(rw, req, id, endpoint)
 }
 
@@ -256,7 +271,6 @@ func mockRespondRoot(rw http.ResponseWriter, req *http.Request) {
 	id := vars["id"]
 	endpoint := "/"
 
-	accessControlAllow(rw, req)
 	processEndpointResponse(rw, req, id, endpoint)
 }
 
@@ -265,7 +279,6 @@ func mockRespond(rw http.ResponseWriter, req *http.Request) {
 	id := vars["id"]
 	endpoint := "/" + vars["endpoint"]
 
-	accessControlAllow(rw, req)
 	processEndpointResponse(rw, req, id, endpoint)
 }
 
