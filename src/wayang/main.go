@@ -291,14 +291,14 @@ func processEndpointResponse(rw http.ResponseWriter, req *http.Request, id strin
 	accessControlAllow(rw, req)
 	ep, err := db.GetEndpoint(id, endpoint)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
-	mockResponse := ep[req.Method]
 
-	if len(mockResponse) == 0 {
+	mockResponse, ok := ep[req.Method]
+	if !ok {
 		http.Error(rw, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 		return
 	}
