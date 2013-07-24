@@ -54,9 +54,9 @@ func (m *MongoStore) NewMock(uris Mock) (id string, err error) {
 
 func (m *MongoStore) GetEndpoint(id string, url string) (ep Endpoint, err error) {
 	doc := MongoDocument{}
-	err = m.collection.Find(bson.M{"_id": bson.ObjectIdHex(id)}).Select(bson.M{"uris": 1}).One(&doc)
+	err = m.collection.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&doc)
 	if err != nil {
-		return Endpoint{}, err
+		return Endpoint{}, ErrNoSuchEndpoint
 	} else {
 		return doc.URIs[url], nil
 	}

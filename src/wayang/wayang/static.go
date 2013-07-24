@@ -23,7 +23,12 @@ func (s *StaticStore) NewMock(uris Mock) (id string, err error) {
 }
 
 func (s *StaticStore) GetEndpoint(id string, url string) (ep Endpoint, err error) {
-	return s.StaticData[url], nil
+	ret, ok := s.StaticData[url]
+	if ok {
+		return ret, nil
+	} else {
+		return Endpoint{}, ErrNoSuchEndpoint
+	}
 }
 
 func (s *StaticStore) Close() {

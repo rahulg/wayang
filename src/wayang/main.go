@@ -291,7 +291,7 @@ func processEndpointResponse(rw http.ResponseWriter, req *http.Request, id strin
 	accessControlAllow(rw, req)
 	ep, err := db.GetEndpoint(id, endpoint)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusNotFound)
+		http.Error(rw, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 

@@ -1,5 +1,13 @@
 package wayang
 
+import (
+	"errors"
+)
+
+var (
+	ErrNoSuchEndpoint = errors.New("No such endpoint")
+)
+
 type Endpoint map[string]interface{}
 type Mock map[string]Endpoint
 
