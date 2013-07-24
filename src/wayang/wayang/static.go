@@ -28,3 +28,8 @@ func (s *StaticStore) GetEndpoint(id string, url string) (ep Endpoint, err error
 
 func (s *StaticStore) Close() {
 }
+
+func (s *StaticStore) UpdateEndpoint(id string, uris Mock) (err error) {
+	s.StaticData = uris
+	return nil
+}

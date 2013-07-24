@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"wayang/wayang"
 )
@@ -19,7 +20,8 @@ type Config struct {
 }
 
 var (
-	db wayang.DataStore
+	db     wayang.DataStore
+	config Config
 )
 
 func main() {
@@ -33,7 +35,6 @@ func main() {
 		fmt.Println("Failed to read configuration file:", *configPath)
 		return
 	}
-	config := Config{}
 	config.HTTPPrefix = ""
 
 	err = json.Unmarshal(confData, &config)
@@ -83,6 +84,7 @@ func main() {
 			return
 		}
 
+		r.HandleFunc(config.HTTPPrefix+"/__update__", updateStaticConfig).Methods("GET")
 		r.HandleFunc(config.HTTPPrefix+"/", optionsHandlerRoot).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -304,4 +306,32 @@ func processEndpointResponse(rw http.ResponseWriter, req *http.Request, id strin
 	rv, _ := json.Marshal(mockResponse)
 	rw.Write([]byte(rv))
 
+}
+
+func updateStaticConfig(rw http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
+
+	resp := NewMockResponse{}
+
+	mock := wayang.Mock{}
+	mockData, err := ioutil.ReadFile(config.DatabaseAddress)
+	if err != nil {
+		resp.Status = strconv.Itoa(http.StatusTeapot) + http.StatusText(http.StatusTeapot)
+		resp.Detail = err.Error()
+		fmt.Println("Failed to read static configuration file:", config.DatabaseAddress)
+		return
+	}
+	err = json.Unmarshal(mockData, &mock)
+	if err != nil {
+		resp.Status = strconv.Itoa(http.StatusTeapot) + http.StatusText(http.StatusTeapot)
+		resp.Detail = err.Error()
+		fmt.Println("Failed to parse static configuration file:", config.DatabaseAddress)
+		return
+	}
+
+	err = db.UpdateEndpoint("", mock)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

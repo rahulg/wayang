@@ -1,9 +1,14 @@
 package wayang
 
 import (
+	"errors"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"time"
+)
+
+var (
+	ErrNotImplemented = errors.New("Method not implemented")
 )
 
 type MongoStore struct {
@@ -51,6 +56,10 @@ func (m *MongoStore) GetEndpoint(id string, url string) (ep Endpoint, err error)
 	doc := MongoDocument{}
 	m.collection.Find(bson.M{"_id": bson.ObjectIdHex(id)}).Select(bson.M{"uris": 1}).One(&doc)
 	return doc.URIs[url], nil
+}
+
+func (m *MongoStore) UpdateEndpoint(id string, uris Mock) error {
+	return ErrNotImplemented
 }
 
 func (m *MongoStore) Close() {
