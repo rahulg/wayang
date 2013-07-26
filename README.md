@@ -30,9 +30,17 @@ The primary use case for this is if you're hosting `wayang` at, say, `https://de
 
 ## Static Mode
 
-In static mode, mock-config JSON is read from the file pointed to by `db_addr` in the configuration JSON.
+In static mode, mock-config JSON is read from the file pointed to by `db_addr` in the configuration JSON. Once `wayang` is running, configuration changes can be made by performing requests to the `/http_prefix/__config__` endpoint.
 
-To re-load the mock-config without restarting the app, do a `GET` request to `https://hostname/http_prefix/__update__`. This call may take a while if your JSON is large.
+To get a full dump of the current config, perform a `GET` request.
+
+To replace the entire configuration, perform a `PUT` request with the new config JSON in the body.
+
+To add endpoints, or change the behaviour of existing endpoints, perform a `PATCH` request with the new and modified keys JSON in the body.
+
+To clear the configuration, perform a `DELETE` request.
+
+These calls may take a while if your JSON is large.
 
 ## Pseudo-SaaS Mode
 
