@@ -84,7 +84,7 @@ func main() {
 			return
 		}
 
-		r.HandleFunc(config.HTTPPrefix+"/__update__", updateStaticConfig).Methods("GET")
+		r.HandleFunc(config.HTTPPrefix+"/__config__", staticConfigManagement).Methods("GET", "PUT", "PATCH", "DELETE")
 		r.HandleFunc(config.HTTPPrefix+"/", optionsHandlerRoot).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -167,49 +167,7 @@ func rootPost(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, string(rv), http.StatusInternalServerError)
 		return
 	}
-	mock := wayang.Mock{}
-	err = json.Unmarshal(body, &mock)
-	if err != nil {
-		resp.URL = ""
-		resp.Status = http.StatusText(http.StatusBadRequest)
-		resp.Detail = err.Error()
-		rv, _ := json.Marshal(resp)
-		http.Error(rw, string(rv), http.StatusBadRequest)
-		return
-	}
-
-	// Ensure that all routes begin with a /
-	for k, v := range mock {
-		if k[:1] != "/" {
-			mock["/"+k] = v
-			delete(mock, k)
-		}
-	}
-
-	// Ensure that all requests are in the right format
-	for k, v := range mock {
-		for kk, vv := range v {
-			KK := strings.ToUpper(kk)
-			if KK != "GET" &&
-				KK != "POST" &&
-				KK != "PUT" &&
-				KK != "PATCH" &&
-				KK != "DELETE" {
-				resp.URL = ""
-				resp.Status = http.StatusText(http.StatusBadRequest)
-				resp.Detail = "Invalid key " + kk + " in JSON."
-				rv, _ := json.Marshal(resp)
-				http.Error(rw, string(rv), http.StatusBadRequest)
-				return
-			}
-			if kk != KK {
-				mock[k][KK] = vv
-				delete(mock[k], kk)
-			}
-		}
-	}
-
-	fmt.Println(mock)
+	mock := unmarshalAndCleanup(rw, body)
 
 	id, err := db.NewMock(mock)
 	if err != nil {
@@ -308,30 +266,115 @@ func processEndpointResponse(rw http.ResponseWriter, req *http.Request, id strin
 
 }
 
-func updateStaticConfig(rw http.ResponseWriter, req *http.Request) {
+func staticConfigManagement(rw http.ResponseWriter, req *http.Request) {
+
 	defer req.Body.Close()
+
+	rw.Header().Set("Content-Type", "application/json")
+
+	static := db.(*wayang.StaticStore)
+	resp := NewMockResponse{}
+
+	if req.Method == "GET" {
+
+		rv, _ := json.MarshalIndent(static.StaticData, "", "	")
+		rw.Write([]byte(rv))
+
+	} else if req.Method == "PUT" {
+
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			resp.Status = strconv.Itoa(http.StatusInternalServerError) + " " + http.StatusText(http.StatusInternalServerError)
+			resp.Detail = err.Error()
+			rv, _ := json.Marshal(resp)
+			http.Error(rw, string(rv), http.StatusInternalServerError)
+			return
+		}
+
+		mock := unmarshalAndCleanup(rw, body)
+
+		static.StaticData = mock
+
+		go syncToFile()
+
+	} else if req.Method == "PATCH" {
+
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			resp.Status = strconv.Itoa(http.StatusInternalServerError) + " " + http.StatusText(http.StatusInternalServerError)
+			resp.Detail = err.Error()
+			rv, _ := json.Marshal(resp)
+			http.Error(rw, string(rv), http.StatusInternalServerError)
+			return
+		}
+
+		partMock := unmarshalAndCleanup(rw, body)
+
+		for k, v := range partMock {
+			static.StaticData[k] = v
+		}
+
+		go syncToFile()
+
+	} else if req.Method == "DELETE" {
+
+		static.StaticData = wayang.Mock{}
+
+		go syncToFile()
+
+	}
+
+}
+
+func unmarshalAndCleanup(rw http.ResponseWriter, data []byte) (mock wayang.Mock) {
 
 	resp := NewMockResponse{}
 
-	mock := wayang.Mock{}
-	mockData, err := ioutil.ReadFile(config.DatabaseAddress)
+	err := json.Unmarshal(data, &mock)
 	if err != nil {
-		resp.Status = strconv.Itoa(http.StatusTeapot) + http.StatusText(http.StatusTeapot)
+		resp.Status = strconv.Itoa(http.StatusBadRequest) + " " + http.StatusText(http.StatusBadRequest)
 		resp.Detail = err.Error()
-		fmt.Println("Failed to read static configuration file:", config.DatabaseAddress)
-		return
-	}
-	err = json.Unmarshal(mockData, &mock)
-	if err != nil {
-		resp.Status = strconv.Itoa(http.StatusTeapot) + http.StatusText(http.StatusTeapot)
-		resp.Detail = err.Error()
-		fmt.Println("Failed to parse static configuration file:", config.DatabaseAddress)
+		rv, _ := json.Marshal(resp)
+		http.Error(rw, string(rv), http.StatusBadRequest)
 		return
 	}
 
-	err = db.UpdateEndpoint("", mock)
-	if err != nil {
-		fmt.Println(err)
-		return
+	// Ensure that all routes begin with a /
+	for k, v := range mock {
+		if k[:1] != "/" {
+			mock["/"+k] = v
+			delete(mock, k)
+		}
 	}
+
+	// Ensure that all requests are in the right format
+	for k, v := range mock {
+		for kk, vv := range v {
+			KK := strings.ToUpper(kk)
+			if KK != "GET" &&
+				KK != "POST" &&
+				KK != "PUT" &&
+				KK != "PATCH" &&
+				KK != "DELETE" {
+				resp.Status = strconv.Itoa(http.StatusBadRequest) + " " + http.StatusText(http.StatusBadRequest)
+				resp.Detail = "Invalid HTTP Method"
+				rv, _ := json.Marshal(resp)
+				http.Error(rw, string(rv), http.StatusBadRequest)
+				return
+			}
+			if kk != KK {
+				mock[k][KK] = vv
+				delete(mock[k], kk)
+			}
+		}
+	}
+
+	return
+
+}
+
+func syncToFile() {
+	static := db.(*wayang.StaticStore)
+	data, _ := json.MarshalIndent(static.StaticData, "", "	")
+	ioutil.WriteFile(config.DatabaseAddress, data, 0644)
 }
