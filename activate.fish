@@ -1,4 +1,5 @@
 set -x GOPATH (dirname (status -f))
+functions -e __genv_fish_prompt
 functions -c fish_prompt __genv_fish_prompt
 functions -e fish_prompt
 function fish_prompt
@@ -9,7 +10,11 @@ function gcd
 end
 function deactivate
     set -e GOPATH
-	functions -c __genv_fish_prompt fish_prompt
+	functions -e fish_prompt
+	. ( begin
+			printf "function fish_prompt\n\t#"
+			functions __genv_fish_prompt
+		end | psub )
 	functions -e __genv_fish_prompt
     functions -e deactivate
 end
