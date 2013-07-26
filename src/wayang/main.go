@@ -112,7 +112,6 @@ func accessControlAllow(rw http.ResponseWriter, req *http.Request) {
 func rootOptions(rw http.ResponseWriter, req *http.Request) {
 
 	defer req.Body.Close()
-
 	accessControlAllow(rw, req)
 
 	csv := "OPTIONS,GET,POST"
@@ -123,6 +122,7 @@ func rootOptions(rw http.ResponseWriter, req *http.Request) {
 
 func rootGet(rw http.ResponseWriter, req *http.Request) {
 	accessControlAllow(rw, req)
+	rw.Header().Set("Content-Type", "text/plain")
 	helpMessage := `Hi!
 To create an endpoint, do a POST request to the current URL.
 The request should contain JSON of the following format:
@@ -153,9 +153,11 @@ type NewMockResponse struct {
 }
 
 func rootPost(rw http.ResponseWriter, req *http.Request) {
+
 	defer req.Body.Close()
 	accessControlAllow(rw, req)
 	rw.Header().Set("Content-Type", "application/json")
+
 	resp := NewMockResponse{}
 
 	body, err := ioutil.ReadAll(req.Body)
@@ -163,7 +165,7 @@ func rootPost(rw http.ResponseWriter, req *http.Request) {
 		resp.URL = ""
 		resp.Status = http.StatusText(http.StatusInternalServerError)
 		resp.Detail = err.Error()
-		rv, _ := json.Marshal(resp)
+		rv, _ := json.MarshalIndent(resp, "", "	")
 		http.Error(rw, string(rv), http.StatusInternalServerError)
 		return
 	}
@@ -174,7 +176,7 @@ func rootPost(rw http.ResponseWriter, req *http.Request) {
 		resp.URL = ""
 		resp.Status = http.StatusText(http.StatusInternalServerError)
 		resp.Detail = err.Error()
-		rv, _ := json.Marshal(resp)
+		rv, _ := json.MarshalIndent(resp, "", "	")
 		http.Error(rw, string(rv), http.StatusInternalServerError)
 		return
 	} else {
@@ -182,7 +184,7 @@ func rootPost(rw http.ResponseWriter, req *http.Request) {
 	}
 	resp.URL = "http://" + req.Host + "/" + id
 
-	rv, _ := json.Marshal(resp)
+	rv, _ := json.MarshalIndent(resp, "", "	")
 
 	rw.Write(rv)
 }
@@ -206,8 +208,8 @@ func optionsHandler(rw http.ResponseWriter, req *http.Request) {
 func processOptionsResponse(rw http.ResponseWriter, req *http.Request, id string, endpoint string) {
 
 	defer req.Body.Close()
-
 	accessControlAllow(rw, req)
+
 	ep, err := db.GetEndpoint(id, endpoint)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -245,15 +247,14 @@ func mockRespond(rw http.ResponseWriter, req *http.Request) {
 func processEndpointResponse(rw http.ResponseWriter, req *http.Request, id string, endpoint string) {
 
 	defer req.Body.Close()
-
 	accessControlAllow(rw, req)
+	rw.Header().Set("Content-Type", "application/json")
+
 	ep, err := db.GetEndpoint(id, endpoint)
 	if err != nil {
 		http.Error(rw, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
-
-	rw.Header().Set("Content-Type", "application/json")
 
 	mockResponse, ok := ep[req.Method]
 	if !ok {
@@ -261,7 +262,7 @@ func processEndpointResponse(rw http.ResponseWriter, req *http.Request, id strin
 		return
 	}
 
-	rv, _ := json.Marshal(mockResponse)
+	rv, _ := json.MarshalIndent(mockResponse, "", "	")
 	rw.Write([]byte(rv))
 
 }
@@ -270,6 +271,7 @@ func staticConfigManagement(rw http.ResponseWriter, req *http.Request) {
 
 	defer req.Body.Close()
 
+	accessControlAllow(rw, req)
 	rw.Header().Set("Content-Type", "application/json")
 
 	static := db.(*wayang.StaticStore)
@@ -286,7 +288,7 @@ func staticConfigManagement(rw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			resp.Status = strconv.Itoa(http.StatusInternalServerError) + " " + http.StatusText(http.StatusInternalServerError)
 			resp.Detail = err.Error()
-			rv, _ := json.Marshal(resp)
+			rv, _ := json.MarshalIndent(resp, "", "	")
 			http.Error(rw, string(rv), http.StatusInternalServerError)
 			return
 		}
@@ -303,7 +305,7 @@ func staticConfigManagement(rw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			resp.Status = strconv.Itoa(http.StatusInternalServerError) + " " + http.StatusText(http.StatusInternalServerError)
 			resp.Detail = err.Error()
-			rv, _ := json.Marshal(resp)
+			rv, _ := json.MarshalIndent(resp, "", "	")
 			http.Error(rw, string(rv), http.StatusInternalServerError)
 			return
 		}
@@ -334,7 +336,7 @@ func unmarshalAndCleanup(rw http.ResponseWriter, data []byte) (mock wayang.Mock)
 	if err != nil {
 		resp.Status = strconv.Itoa(http.StatusBadRequest) + " " + http.StatusText(http.StatusBadRequest)
 		resp.Detail = err.Error()
-		rv, _ := json.Marshal(resp)
+		rv, _ := json.MarshalIndent(resp, "", "	")
 		http.Error(rw, string(rv), http.StatusBadRequest)
 		return
 	}
@@ -358,7 +360,7 @@ func unmarshalAndCleanup(rw http.ResponseWriter, data []byte) (mock wayang.Mock)
 				KK != "DELETE" {
 				resp.Status = strconv.Itoa(http.StatusBadRequest) + " " + http.StatusText(http.StatusBadRequest)
 				resp.Detail = "Invalid HTTP Method"
-				rv, _ := json.Marshal(resp)
+				rv, _ := json.MarshalIndent(resp, "", "	")
 				http.Error(rw, string(rv), http.StatusBadRequest)
 				return
 			}
