@@ -60,9 +60,9 @@ func main() {
 		r.HandleFunc(config.HTTPPrefix+"/", rootPost).Methods("POST")
 		r.HandleFunc(config.HTTPPrefix+"/", rootOptions).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}", optionsHandlerRoot).Methods("OPTIONS")
-		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
+		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/_-]+}", optionsHandler).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
-		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+		r.HandleFunc(config.HTTPPrefix+"/{id:[0-9a-z]+}/{endpoint:[a-zA-Z0-9/_-]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
 
 	} else if config.Database == "static" {
 
