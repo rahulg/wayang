@@ -86,9 +86,9 @@ func main() {
 
 		r.HandleFunc(config.HTTPPrefix+"/__config__", staticConfigManagement).Methods("GET", "PUT", "PATCH", "DELETE")
 		r.HandleFunc(config.HTTPPrefix+"/", optionsHandlerRoot).Methods("OPTIONS")
-		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/]+}", optionsHandler).Methods("OPTIONS")
+		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/_-]+}", optionsHandler).Methods("OPTIONS")
 		r.HandleFunc(config.HTTPPrefix+"/", mockRespondRoot).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
-		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+		r.HandleFunc(config.HTTPPrefix+"/{endpoint:[a-zA-Z0-9/_-]+}", mockRespond).Methods("GET", "POST", "PUT", "PATCH", "DELETE")
 
 	}
 	defer db.Close()
