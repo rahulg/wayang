@@ -107,6 +107,7 @@ func accessControlAllow(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("Access-Control-Allow-Origin", origin)
 		log.Println(req.Method, req.RequestURI, "[Origin:", req.Header.Get("Origin")+"]")
 	}
+	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 }
 
 func rootOptions(rw http.ResponseWriter, req *http.Request) {
